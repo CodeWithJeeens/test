@@ -1,0 +1,6 @@
+[build]
+command = "npm run build"
+publish = "netlify"
+
+[functions]
+directory = "netlify/functions"
