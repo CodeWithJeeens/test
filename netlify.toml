@@ -2,5 +2,8 @@
 command = "npm run build"
 publish = "netlify"
 
+[build.environment]
+SECRETS_SCAN_OMIT_KEYS = "PUBLIC_SUPABASE_ANON_KEY,PUBLIC_SUPABASE_URL"
+
 [functions]
 directory = "netlify/functions"
