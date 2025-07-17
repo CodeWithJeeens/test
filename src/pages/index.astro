@@ -1,0 +1,190 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Wartungsarbeiten - Lagerbestand Überwachung">
+  <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6">
+    <div class="max-w-lg w-full mx-auto">
+      <!-- Wartungsarbeiten Container -->
+      <div class="bg-white rounded-lg shadow-lg p-8 sm:p-10 border border-gray-200">
+        <!-- Icon -->
+        <div class="text-center mb-8">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+          </div>
+        </div>
+
+        <!-- Haupttext -->
+        <div class="text-center mb-4">
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+            Wartungsarbeiten
+          </h1>
+          
+        </div>
+
+        <!-- Loader -->
+        <div class="mb-8 flex justify-center">
+          <span class="loader"></span>
+            </div>
+
+        <!-- Login-Bereich -->
+        <div class="bg-gray-50 rounded-lg p-6 border border-gray-200 mt-8">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4 text-center">Zugang für Administratoren</h3>
+          
+          <!-- Code-Login-Formular -->
+          <form id="codeLoginForm" class="space-y-4">
+            <div>
+              <label for="accessCode" class="block text-sm font-medium text-gray-700 mb-2">
+                Zugangscode
+              </label>
+              <input
+                type="text"
+                id="accessCode"
+                name="accessCode"
+                required
+                maxlength="23"
+                pattern="[A-Z0-9]{4}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{4}"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-base tracking-widest font-mono"
+                placeholder="XXXX-XXXXX-XXXXX-XXXX"
+                style="letter-spacing: 0.2em;"
+              />
+              
+            </div>
+
+            <button
+              type="submit"
+              class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors"
+            >
+              Zugang gewähren
+            </button>
+          </form>
+
+          <!-- Status-Nachrichten -->
+          <div id="statusMessage" class="mt-4 hidden"></div>
+      </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center">
+          <p class="text-sm text-gray-500">
+          © 2024 Lagerbestand Überwachung System
+        </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .loader {
+    height: 100px;
+    width: 70px;
+    border-radius: 40px 40px 8px 8px;
+    position: relative;
+    background: #FF3D00;
+
+    background-image: linear-gradient(0deg,
+        #f63a99 25%,
+        #30dcf6 25%,
+        #30dcf6 25%,
+        #30dcf6 50%,
+        #f2d200 50%,
+        #f2d200 50%,
+        #f2d200 75%,
+        #70ca5c 75%);
+    background-position: 0px 0px;
+    background-size: auto 120px;
+    background-repeat: repeat-y;
+    animation: colorShift 6s linear infinite;
+
+  }
+  .loader:before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    bottom: 10px;
+    width: 10px;
+    height: 70px;
+    border-radius: 35px;
+    background: rgba(255, 255, 255, 0.5);
+
+  }
+
+  .loader:after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translate(-50% , 0);
+    box-shadow: 0 10px 2px rgba(0, 0, 0, 0.25) inset;
+    width: 22px;
+    height: 30px;
+    background: #E09C5F;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 8px;
+  }
+
+  @keyframes colorShift {
+    to {    background-position: 0 120px}
+  }
+</style>
+
+<script>
+  // Code-Formatierung
+  const accessCodeInput = document.getElementById('accessCode') as HTMLInputElement;
+  
+  accessCodeInput?.addEventListener('input', (e) => {
+    let value = (e.target as HTMLInputElement).value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Formatierung: XXXX-XXXXX-XXXXX-XXXX
+    if (value.length > 18) value = value.slice(0, 18);
+    
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+      if (i === 4 || i === 9 || i === 14) formatted += '-';
+      formatted += value[i];
+    }
+    
+    (e.target as HTMLInputElement).value = formatted;
+  });
+
+  // Code-Login-Formular
+  document.getElementById('codeLoginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const accessCode = formData.get('accessCode') as string;
+
+    try {
+      const response = await fetch('/api/user/code-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessCode }),
+      });
+
+      if (response.ok) {
+        window.location.href = '/user/dashboard';
+      } else {
+        const error = await response.json();
+        showMessage(error.error || 'Zugang verweigert', 'error');
+      }
+    } catch (error) {
+      showMessage('Ein Fehler ist aufgetreten', 'error');
+    }
+  });
+
+  function showMessage(message: string, type: 'success' | 'error') {
+    const statusDiv = document.getElementById('statusMessage');
+    if (statusDiv) {
+      statusDiv.className = `mt-4 p-3 rounded-md text-center ${
+        type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+      }`;
+      statusDiv.textContent = message;
+      statusDiv.classList.remove('hidden');
+    }
+  }
+</script>

@@ -1,0 +1,363 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../lib/supabase';
+
+// Session-Check und Benutzername extrahieren
+const sessionCookie = Astro.cookies.get('user_session')?.value;
+if (!sessionCookie) {
+  return Astro.redirect('/');
+}
+
+let username = 'User';
+try {
+  const sessionData = JSON.parse(sessionCookie);
+  if (sessionData.username) {
+    username = sessionData.username;
+  }
+} catch (error) {
+  // Fallback zu 'User' bei Fehler beim Parsen
+}
+
+// Produkte aus Supabase laden
+let products: any[] = [];
+
+try {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('id', { ascending: true });
+
+  if (!error && data) {
+    products = data.map((product: any) => ({
+      ...product,
+      status: product.stock === 0 ? 'out_of_stock' : 
+              product.stock <= product.min_stock ? 'low' : 'available'
+    }));
+  }
+} catch (error) {
+  // console.error('Error loading products:', error);
+}
+---
+
+<Layout title="User Dashboard - Lagerbestand Überwachung">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-sm shadow-lg border-b border-slate-200/50 sticky top-0 z-10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4 sm:py-6">
+          <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">User Dashboard</h1>
+          <div class="flex items-center space-x-4">
+            <button 
+              id="logoutBtn"
+              class="inline-flex items-center justify-center p-3 border border-transparent rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              title="Abmelden"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <!-- Status-Anzeige -->
+      <div class="mb-8">
+        <div class="bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-white/20">
+          <div class="mb-4">
+            <h2 class="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Willkommen zurück, {username}!</h2>
+          </div>
+          <div class="flex items-center">
+            <div class="flex items-center space-x-3">
+              <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-lg"></div>
+              <span class="text-sm font-semibold text-slate-800">Daten aktuell</span>
+            </div>
+            <div class="flex-1 flex justify-center px-8">
+              <span class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Letzte Aktualisierung: {new Date().toLocaleTimeString('de-DE')}</span>
+            </div>
+            <button 
+              id="refreshBtn"
+              class="inline-flex items-center justify-center p-3 border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 rounded-xl"
+              title="Aktualisieren"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Produktgrid -->
+      <div class="bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl border border-white/20 overflow-hidden">
+        <div class="px-6 sm:px-8 py-6 border-b border-slate-200/50">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+            <div>
+              <h2 class="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Produktübersicht</h2>
+              <p class="text-sm text-slate-600 mt-1">Hier sehen Sie alle Produkte und deren Lagerbestand</p>
+            </div>
+            <div class="w-full sm:w-80">
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="block w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl leading-5 bg-white/80 backdrop-blur-sm placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm shadow-lg transition-all duration-200"
+                  placeholder="Produkte suchen..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 sm:p-8">
+          <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {products.length > 0 ? products.map((product: any) => (
+              <div class="product-card bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1" data-name="{product.name}" data-category="{product.category}" data-description="{product.description}" data-marke="{product.marke || ''}">
+                <div class="flex-1">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">{product.name} - {product.category}</h3>
+                    <span class={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full shadow-lg ${
+                      product.status === 'available' 
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : product.status === 'low'
+                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                        : 'bg-red-100 text-red-800 border border-red-200'
+                    }`}>
+                      {product.status === 'available' ? (
+                        <svg class="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                      ) : product.status === 'low' ? (
+                        <svg class="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                      ) : (
+                        <svg class="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                      )}
+                      {product.stock}
+                    </span>
+                  </div>
+                  <p class="text-sm text-slate-600 mb-6 leading-relaxed">{product.description}</p>
+                  
+                  <!-- Produktdetails -->
+                  <div class="space-y-3 mb-6">
+                    <div class="flex justify-between items-center py-2 px-3 bg-slate-50 rounded-lg">
+                      <span class="text-sm text-slate-600 font-medium">Marke:</span>
+                      <span class="text-sm font-semibold text-slate-800">{product.marke || '-'}</span>
+                    </div>
+
+                    <div class="flex justify-between items-center py-2 px-3 bg-slate-50 rounded-lg">
+                      <span class="text-sm text-slate-600 font-medium">Preis:</span>
+                      <span class="text-sm font-semibold text-slate-800">{product.sell_price ? `${product.sell_price.toFixed(2)}€` : '-'}</span>
+                    </div>
+                  </div>
+
+
+                </div>
+              </div>
+            )) : (
+              <div class="col-span-full text-center py-12">
+                <div class="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                  <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                  <p class="text-slate-500 text-lg font-medium">Keine Produkte gefunden.</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div id="noResults" class="hidden text-center py-12">
+            <div class="bg-white/50 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+              <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <p class="text-slate-500 text-lg font-medium">Keine Produkte gefunden, die zu Ihrer Suche passen.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bestell-Modal -->
+  <div id="orderModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg font-bold text-slate-900">Bestellung aufgeben</h3>
+          <button id="closeOrderModal" class="text-slate-400 hover:text-slate-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <form id="orderForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Produkt</label>
+            <input type="text" id="orderProductName" class="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50" readonly />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Menge</label>
+            <input type="number" id="orderQuantity" min="1" value="1" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Lieferdatum</label>
+            <input type="date" id="orderDeliveryDate" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Notizen (optional)</label>
+            <textarea id="orderNotes" rows="3" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Zusätzliche Informationen..."></textarea>
+          </div>
+          
+          <div class="flex space-x-3 pt-4">
+            <button type="button" id="cancelOrder" class="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">
+              Abbrechen
+            </button>
+            <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              Bestellung aufgeben
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status-Nachrichten -->
+  <div id="statusMessage" class="fixed top-4 right-4 z-50 max-w-sm hidden"></div>
+</Layout>
+
+<script>
+  // Username aus Server-seitigem Code oder Cookie extrahieren
+  let username = '{username}'; // Server-seitiger Fallback
+  
+  // Versuche Username aus Cookie zu extrahieren
+  try {
+    const sessionCookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('user_session='));
+    
+    if (sessionCookie) {
+      const cookieValue = sessionCookie.split('=')[1];
+      const sessionData = JSON.parse(decodeURIComponent(cookieValue));
+      
+      if (sessionData && sessionData.username) {
+        username = sessionData.username;
+      }
+    }
+  } catch (error) {
+    console.error('Fehler beim Extrahieren des Benutzernamens aus Cookie:', error);
+  }
+
+  // Debug: Benutzername überprüfen
+  console.log('Verwendeter Benutzername:', username);
+
+  // Logout-Funktionalität
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/user/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      // Fehler still behandeln
+    }
+  });
+
+  // Refresh-Funktionalität
+  const refreshBtn = document.getElementById('refreshBtn') as HTMLButtonElement;
+  const statusIndicator = document.querySelector('.w-3.h-3.bg-emerald-500');
+  const statusText = document.querySelector('.text-sm.font-semibold.text-slate-800');
+
+  refreshBtn?.addEventListener('click', async () => {
+    try {
+      // Button während des Ladens deaktivieren
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+      `;
+
+      // Status auf "Lädt" ändern
+      if (statusIndicator) statusIndicator.className = 'w-3 h-3 bg-amber-500 rounded-full animate-pulse shadow-lg';
+      if (statusText) statusText.textContent = 'Daten werden aktualisiert...';
+
+      // Seite neu laden
+      window.location.reload();
+
+    } catch (error) {
+      // Status auf "Fehler" ändern
+      if (statusIndicator) statusIndicator.className = 'w-3 h-3 bg-red-500 rounded-full shadow-lg';
+      if (statusText) statusText.textContent = 'Fehler beim Aktualisieren';
+      
+      // Button zurücksetzen
+      if (refreshBtn) refreshBtn.disabled = false;
+      refreshBtn.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+      `;
+    }
+  });
+
+  // Suchfunktionalität
+  const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+  const productsGrid = document.getElementById('productsGrid');
+  const noResults = document.getElementById('noResults');
+
+  searchInput?.addEventListener('input', (e) => {
+    const searchTerm = (e.target as HTMLInputElement).value.toLowerCase().trim();
+    const productCards = document.querySelectorAll('.product-card');
+
+    let hasResults = false;
+
+    productCards.forEach((card) => {
+      // Suche in data-Attributen
+      const name = card.getAttribute('data-name')?.toLowerCase() || '';
+      const category = card.getAttribute('data-category')?.toLowerCase() || '';
+      const description = card.getAttribute('data-description')?.toLowerCase() || '';
+      const marke = card.getAttribute('data-marke')?.toLowerCase() || '';
+
+      // Suche auch im sichtbaren Text der Karte
+      const cardText = card.textContent?.toLowerCase() || '';
+
+      const matches = name.includes(searchTerm) || 
+                     category.includes(searchTerm) || 
+                     description.includes(searchTerm) || 
+                     marke.includes(searchTerm) ||
+                     cardText.includes(searchTerm);
+
+      (card as HTMLElement).style.display = matches || searchTerm === '' ? 'block' : 'none';
+      if (matches) hasResults = true;
+    });
+
+    if (productsGrid && noResults) {
+      if (hasResults || searchTerm === '') {
+        productsGrid.style.display = 'grid';
+        noResults.classList.add('hidden');
+      } else {
+        productsGrid.style.display = 'none';
+        noResults.classList.remove('hidden');
+      }
+    }
+  });
+</script> 
