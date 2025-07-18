@@ -1,0 +1,2 @@
+# Redirects for Netlify
+/_astro/* /_astro/:splat 200 
